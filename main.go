@@ -16,16 +16,11 @@ type Pos struct {
     x int
     y int
 }
-
-type Dir = Pos
-
-type Snek struct { //TODO: Make Snek a Queue represented by a channel
+type Snek struct { //TODO: Make body a queue represented by a buffered channel
     body []Pos 
-    dir  Dir
+    dir  Pos
     len  int
 }
-
-type Cell = int
 
 var (
     h = Pos{x: -1, y: 0}
@@ -36,6 +31,7 @@ var (
 
 var foodPos = Pos{x: 8, y: 7}
 var positions []Pos
+var snek Snek
 
 const (
     blue = termbox.ColorBlue
@@ -43,6 +39,20 @@ const (
     black = termbox.ColorBlack
     white = termbox.ColorWhite
 )
+
+func init() {
+    for y := 0; y < rows; y++ {
+        for x := 0; x < cols; x++ {
+            positions = append(positions, Pos{x: x, y: y})
+        }
+    }
+    snek = Snek{
+        body: []Pos{{x: 2, y: 7}, {x: 3, y: 7}, {x: 4, y: 7}},
+        dir:  l,
+        len:  3,
+    }
+    //TODO: print borders
+}
 
 func main() {
 
@@ -52,6 +62,14 @@ func main() {
     }
     // HideCursor() (maybe?)
     defer termbox.Close()
+    //
+    // termbox.Clear(black, black)
+    // setBorder()
+    // setSquare(foodPos.x+1, foodPos.y+1, blue, black)
+    // for _, snekCell := range snek.body {
+    //     setSquare(snekCell.x+1, snekCell.y+1, green, black)
+    // }
+    // termbox.Flush()
 
     gameLoop()
 }
@@ -77,54 +95,37 @@ func setBorder() {
     }
 }
 
+
 func gameLoop() {
     // Initialize game state, snek, foodPos, etc.
     // init
     //TODO: Move eveything before the for { } loop into func init()
-    for y := 0; y < rows; y++ {
-        for x := 0; x < cols; x++ {
-            positions = append(positions, Pos{x: x, y: y})
-        }
-    }
-    snek := Snek{
-        body: []Pos{{x: 2, y: 7}, {x: 3, y: 7}, {x: 4, y: 7}},
-        dir:  l,
-        len:  3,
-    }
-    //TODO: print borders
-    termbox.Clear(black, black)
-    setBorder()
-    setSquare(foodPos.x+1, foodPos.y+1, blue, black) // TODO: Set square
-    for _, snekCell := range snek.body {
-        setSquare(snekCell.x+1, snekCell.y+1, green, black) // TODO: Set square
-    }
-    termbox.Flush()
 
     for {
 
-        snek.render()
+        render()
 
-        go snek.handleInput()
+        time.Sleep(100 * time.Millisecond)
+        go handleInput()
 
-        snek.updateGameState()
+        updateGameState()
         // Check for game over conditions
 
         // Delay to control game speed
-        time.Sleep(100 * time.Millisecond)
     }
 }
 
-func (snek *Snek) render() {
+func render() {
     defer termbox.Flush()
     termbox.Clear(black, black)
     setBorder()
-    setSquare(foodPos.x + 1, foodPos.y + 1, blue, black) // TODO: Set square
+    setSquare(foodPos.x + 1, foodPos.y + 1, blue, black)
     for _, snekCell := range snek.body {
-        setSquare(snekCell.x + 1, snekCell.y + 1, green, black) // TODO: Set square
+        setSquare(snekCell.x + 1, snekCell.y + 1, green, black)
     }
 }
 
-func (snek *Snek) handleInput() {
+func handleInput() {
     // TODO: Only read h/l when dir is j/k and vice versa
     if ev := termbox.PollEvent(); ev.Type == termbox.EventKey {
         switch {
@@ -149,8 +150,8 @@ func (snek *Snek) handleInput() {
     }
 
 }
-
-func (snek *Snek) updateGameState() {
+//TODO: Make faster
+func updateGameState() {
     head := snek.body[snek.len - 1]
     dir := snek.dir
     newHead := Pos{head.x + dir.x, head.y + dir.y}
