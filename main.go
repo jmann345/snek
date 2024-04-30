@@ -51,7 +51,6 @@ func init() {
         dir:  l,
         len:  3,
     }
-    //TODO: print borders
 }
 
 func main() {
@@ -97,10 +96,6 @@ func setBorder() {
 
 
 func gameLoop() {
-    // Initialize game state, snek, foodPos, etc.
-    // init
-    //TODO: Move eveything before the for { } loop into func init()
-
     for {
 
         render()
@@ -109,9 +104,7 @@ func gameLoop() {
         go handleInput()
 
         updateGameState()
-        // Check for game over conditions
-
-        // Delay to control game speed
+        // TODO: Check for game over conditions
     }
 }
 
@@ -126,7 +119,6 @@ func render() {
 }
 
 func handleInput() {
-    // TODO: Only read h/l when dir is j/k and vice versa
     if ev := termbox.PollEvent(); ev.Type == termbox.EventKey {
         switch {
         case ev.Key == termbox.KeyEsc: 
@@ -150,7 +142,6 @@ func handleInput() {
     }
 
 }
-//TODO: Make faster
 func updateGameState() {
     head := snek.body[snek.len - 1]
     dir := snek.dir
@@ -164,7 +155,7 @@ func updateGameState() {
     snek.body = append(snek.body, newHead)
 
     switch {
-    case newHead == foodPos: //change this to switch newHead, check for collisions with (if its not empty or food, its death)
+    case newHead == foodPos:
         snek.len++ // TODO: replace this field with a GPS (call it gps)
         snekMap[newHead] = true
 
