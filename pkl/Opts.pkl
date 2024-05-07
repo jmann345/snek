@@ -1,0 +1,16 @@
+@go.Package { name = "github.com/jmann345/snek/opts"}
+module jmann345.snek.Opts
+
+import "package://pkg.pkl-lang.org/pkl-go/pkl.golang@0.6.0#/go.pkl"
+
+rows: Int
+cols: Int
+fg: Int
+bg: Int
+snekFg: Int
+foodFg: Int
+snekSkin: String
+foodSkin: String
+speed: Int
+snax: Int
+portals: Boolean

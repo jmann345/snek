@@ -1,14 +1,46 @@
 package main
 
 import (
-	"github.com/nsf/termbox-go"
+    "context"
 	"math/rand"
 	"os"
 	"time"
     "strconv"
+
+	"github.com/nsf/termbox-go"
+    "github.com/jmann345/snek/opts"
 )
 
+// IDEA: rewrite everything in lua
 // TODO: Go through each TODO and delete them as you go
+type Difficulty = byte
+const (
+    easy Difficulty = iota
+    medium
+    hard
+)
+
+type Speed = int
+const (
+    slow Speed = 75
+    mid Speed = 100
+    fast Speed = 150
+)
+
+type Options struct {
+    rows     int
+    cols     int
+    fg       termbox.Attribute
+    bg       termbox.Attribute
+    snekFg   termbox.Attribute
+    foodFg   termbox.Attribute
+    snekSkin rune
+    foodSkin rune
+    speed    Speed
+    snax     int
+    portals  bool
+}
+// TODO: Make selection screen, offer initial opts for fun game modes 
 
 const (
 	rows = 16
@@ -26,7 +58,7 @@ type Pos struct {
 	x int
 	y int
 }
-type Snek struct { //IDEA: Use a pkl file for settings, i.e. arena size, snek/food skin, length gain, difficulty, etc.
+type Snek struct {
 	body    []Pos
 	snekMap map[Pos]bool
 	dir     Pos
@@ -40,10 +72,13 @@ var (
 	l = Pos{x: 1, y: 0}
 )
 
-var foodPos = Pos{x: 8, y: 7}
-var positions []Pos
-var snek Snek
-var score int
+var ( 
+    foodPos = Pos{x: 8, y: 7}
+    positions []Pos
+    snek Snek
+    score int
+    cfg Options
+)
 
 func init() {
     score = 0
@@ -61,7 +96,14 @@ func init() {
 }
 
 func main() {
-	err := termbox.Init()
+
+    pklCfg, err := opts.LoadFromPath(context.Background(), "pkl/defaultOpts.pkl") // TODO: path should be var determined by user input
+    if err != nil {
+        panic(err)
+    }
+    // set config
+
+	err = termbox.Init()
 	if err != nil {
 		panic(err)
 	}
@@ -70,13 +112,9 @@ func main() {
 	gameLoop()
 }
 
-func setSquare(x, y int, fg, bg termbox.Attribute) { //maybe pass in rune as arg
-	rune := ' '
-	if fg == blue {
-		rune = ''
-	}
-	termbox.SetCell(x*2, y, rune, fg, bg)
-	termbox.SetCell(x*2+1, y, rune, fg, bg)
+func setSquare(x, y int, ch rune, fg, bg termbox.Attribute) { //maybe pass in rune as arg
+	termbox.SetCell(x*2, y, ch, fg, bg)
+	termbox.SetCell(x*2+1, y, ch, fg, bg)
 }
 
 func setBorder() {
@@ -119,16 +157,16 @@ func render() {
 	defer termbox.Flush()
 	termbox.Clear(black, black)
 	setBorder()
-	setSquare(foodPos.x+1, foodPos.y+1, blue, black)
+	setSquare(foodPos.x+1, foodPos.y+1, '', blue, black)
 	for _, snekCell := range snek.body {
-		setSquare(snekCell.x+1, snekCell.y+1, green, green)
+		setSquare(snekCell.x+1, snekCell.y+1, ' ', green, green)
 	}
 }
 
 func handleInput() {
 	if ev := termbox.PollEvent(); ev.Type == termbox.EventKey {
 		switch {
-		case ev.Key == termbox.KeyEsc:
+		case ev.Key == termbox.KeyEsc || ev.Key == termbox.KeyCtrlC:
 			termbox.Close()
 			os.Exit(0)
 		case snek.dir == h || snek.dir == l:

@@ -1,0 +1,13 @@
+amends "./Opts.pkl"
+
+rows = 16
+cols = 16
+fg = 8
+bg = 1
+snekFg = 3
+foodFg = 5
+snekSkin = "default"
+foodSkin = "gopher"
+speed = 100
+snax = 1
+portals = false
