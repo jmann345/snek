@@ -5,6 +5,7 @@ import (
 	"math/rand"
 	"os"
 	"time"
+    "strconv"
 )
 
 // TODO: Go through each TODO and delete them as you go
@@ -14,14 +15,22 @@ const (
 	cols = 16
 )
 
+const (
+	blue  = termbox.ColorBlue
+	green = termbox.ColorGreen
+	black = termbox.ColorBlack
+	white = termbox.ColorWhite
+)
+
 type Pos struct {
 	x int
 	y int
 }
-type Snek struct { //TODO: Make body a queue represented by a buffered channel
+type Snek struct { //IDEA: Use a pkl file for settings, i.e. arena size, snek/food skin, length gain, difficulty, etc.
 	body    []Pos
 	snekMap map[Pos]bool
 	dir     Pos
+    len     int
 }
 
 var (
@@ -34,15 +43,10 @@ var (
 var foodPos = Pos{x: 8, y: 7}
 var positions []Pos
 var snek Snek
-
-const (
-	blue  = termbox.ColorBlue
-	green = termbox.ColorGreen
-	black = termbox.ColorBlack
-	white = termbox.ColorWhite
-)
+var score int
 
 func init() {
+    score = 0
 	for y := 0; y < rows; y++ {
 		for x := 0; x < cols; x++ {
 			positions = append(positions, Pos{x: x, y: y})
@@ -52,6 +56,7 @@ func init() {
 		body:    []Pos{{x: 2, y: 7}, {x: 3, y: 7}, {x: 4, y: 7}},
 		snekMap: map[Pos]bool{{x: 2, y: 7}: true, {x: 3, y: 7}: true, {x: 4, y: 7}: true},
 		dir:     l,
+        len:     3,
 	}
 }
 
@@ -75,7 +80,7 @@ func setSquare(x, y int, fg, bg termbox.Attribute) { //maybe pass in rune as arg
 }
 
 func setBorder() {
-	for x := 0; x <= rows*2+2; x++ {
+	for x := 0; x <= cols*2+2; x++ {
 		termbox.SetCell(x, 0, ' ', white, white)
 		termbox.SetCell(x, rows+1, ' ', white, white)
 	}
@@ -86,11 +91,20 @@ func setBorder() {
 		termbox.SetCell(2*cols+2, y, ' ', white, white)
 		termbox.SetCell(2*cols+3, y, ' ', white, white)
 	}
+    termbox.SetCell(0, rows+2, 'S', white, black)
+    termbox.SetCell(1, rows+2, 'C', white, black)
+    termbox.SetCell(2, rows+2, 'O', white, black)
+    termbox.SetCell(3, rows+2, 'R', white, black)
+    termbox.SetCell(4, rows+2, 'E', white, black)
+
+    scoreStr := strconv.Itoa(score)
+    for i, digitCh := range scoreStr {
+        termbox.SetCell(6 + i, rows+2, digitCh, white, black)
+    }
 }
 
 func gameLoop() {
 	for {
-
 		render()
 
 		time.Sleep(100 * time.Millisecond)
@@ -119,16 +133,16 @@ func handleInput() {
 			os.Exit(0)
 		case snek.dir == h || snek.dir == l:
 			switch {
-			case ev.Ch == 'j' || ev.Key == termbox.KeyArrowDown:
+			case ev.Ch == 'j' || ev.Ch == 's' || ev.Key == termbox.KeyArrowDown:
 				snek.dir = j
-			case ev.Ch == 'k' || ev.Key == termbox.KeyArrowUp:
+			case ev.Ch == 'k' || ev.Ch == 'w' || ev.Key == termbox.KeyArrowUp:
 				snek.dir = k
 			}
 		default:
 			switch {
-			case ev.Ch == 'h' || ev.Key == termbox.KeyArrowLeft:
+			case ev.Ch == 'h' || ev.Ch == 'a' || ev.Key == termbox.KeyArrowLeft:
 				snek.dir = h
-			case ev.Ch == 'l' || ev.Key == termbox.KeyArrowRight:
+			case ev.Ch == 'l' || ev.Ch == 'd' || ev.Key == termbox.KeyArrowRight:
 				snek.dir = l
 			}
 		}
@@ -136,7 +150,7 @@ func handleInput() {
 
 }
 func updateGameState() {
-	head := snek.body[len(snek.body)-1]
+	head := snek.body[snek.len - 1]
 	dir := snek.dir
 	newHead := Pos{head.x + dir.x, head.y + dir.y}
 
@@ -144,6 +158,8 @@ func updateGameState() {
 
 	switch {
 	case newHead == foodPos:
+        score++
+        snek.len++
 		snek.snekMap[newHead] = true
 
 		emptyCells := make([]Pos, 0)
@@ -155,13 +171,13 @@ func updateGameState() {
 
 		newFoodIdx := rand.Intn(len(emptyCells))
 		foodPos = emptyCells[newFoodIdx]
-	case snek.snekMap[newHead] == true:
+    case snek.snekMap[newHead] == true: //TODO: Game over screen, select restart/change setting/quit
 		termbox.Close()
 		os.Exit(0)
-	case newHead.x < 0 || newHead.x >= cols || newHead.y < 0 || newHead.y >= rows:
+	case newHead.x < 0 || newHead.x >= cols || newHead.y < 0 || newHead.y >= rows://TODO: Game over screen, select restart/change setting/quit
 		termbox.Close()
 		os.Exit(0)
-	default:
+    default: // TODO: case victory (game over screen but it doesnt say i lost)
 		tail := snek.body[0]
 		snek.snekMap[tail] = false
 		snek.snekMap[newHead] = true
