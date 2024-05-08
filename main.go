@@ -20,40 +20,6 @@ const (
     hard
 )
 
-type Speed = int
-const (
-    slow Speed = 75
-    mid Speed = 100
-    fast Speed = 150
-)
-
-type Options struct {
-    rows     int
-    cols     int
-    fg       termbox.Attribute
-    bg       termbox.Attribute
-    snekFg   termbox.Attribute
-    foodFg   termbox.Attribute
-    snekSkin rune
-    foodSkin rune
-    speed    Speed
-    snax     int
-    portals  bool
-}
-// TODO: Make selection screen, offer initial opts for fun game modes 
-
-const (
-	rows = 16
-	cols = 16
-)
-
-const (
-	blue  = termbox.ColorBlue
-	green = termbox.ColorGreen
-	black = termbox.ColorBlack
-	white = termbox.ColorWhite
-)
-
 type Pos struct {
 	x int
 	y int
@@ -77,10 +43,71 @@ var (
     positions []Pos
     snek Snek
     score int
-    cfg Options
 )
 
-func init() {
+var ( // Copy fields from cfg for speed
+    rows int //CHECK
+    cols int //CHECK
+    fg termbox.Attribute //CHECK
+    bg termbox.Attribute //CHECK
+    snekFg termbox.Attribute //CHECK
+    snekBg termbox.Attribute //CHECK
+    foodFg termbox.Attribute //CHECK  (IDEA: `:179`)
+    foodBg termbox.Attribute //CHECK
+    snekCh rune //CHECK
+    foodCh rune //CHECK
+    speed time.Duration //CHECK
+    portals bool //CHECK 
+    snax int
+    // TODO: change pkl files and uncomment line below
+    // lenGain int
+)
+
+func initConfig(cfg *opts.Opts) {
+    rows = cfg.Rows
+    cols = cfg.Cols
+
+    fg = termbox.Attribute(cfg.Fg)
+    bg = termbox.Attribute(cfg.Bg)
+
+    snekFg = termbox.Attribute(cfg.SnekFg)    
+    snekBg = termbox.Attribute(cfg.Bg) 
+    snekCh = func() rune {
+        switch cfg.SnekSkin {
+            case "python": //TODO: Add more snek skins
+            return ''
+        default:
+            snekBg = snekFg
+            return ' '
+        }
+    }()
+
+    foodFg = termbox.Attribute(cfg.FoodFg)
+    foodBg = termbox.Attribute(cfg.Bg)
+    foodCh = func() rune {
+        switch cfg.FoodSkin {
+        case "gopher":
+            return ''
+        default: //TODO: Add more food skins
+            foodBg = foodFg
+            return ' '
+        }
+    }()
+
+    speed = time.Duration(cfg.Speed)
+    snax = cfg.Snax
+    portals = cfg.Portals
+}
+
+func main() {
+    // TODO: path should be var determined by user input
+    cfg, err := opts.LoadFromPath(context.Background(), "pkl/defaultOpts.pkl")
+    if err != nil {
+        panic(err)
+    }
+    initConfig(cfg)
+    // set config
+    //init global vars
     score = 0
 	for y := 0; y < rows; y++ {
 		for x := 0; x < cols; x++ {
@@ -93,15 +120,6 @@ func init() {
 		dir:     l,
         len:     3,
 	}
-}
-
-func main() {
-
-    pklCfg, err := opts.LoadFromPath(context.Background(), "pkl/defaultOpts.pkl") // TODO: path should be var determined by user input
-    if err != nil {
-        panic(err)
-    }
-    // set config
 
 	err = termbox.Init()
 	if err != nil {
@@ -112,32 +130,32 @@ func main() {
 	gameLoop()
 }
 
-func setSquare(x, y int, ch rune, fg, bg termbox.Attribute) { //maybe pass in rune as arg
+func setSquare(x, y int, ch rune, fg, bg termbox.Attribute) {
 	termbox.SetCell(x*2, y, ch, fg, bg)
 	termbox.SetCell(x*2+1, y, ch, fg, bg)
 }
 
 func setBorder() {
 	for x := 0; x <= cols*2+2; x++ {
-		termbox.SetCell(x, 0, ' ', white, white)
-		termbox.SetCell(x, rows+1, ' ', white, white)
+		termbox.SetCell(x, 0, ' ', fg, fg)
+		termbox.SetCell(x, rows+1, ' ', fg, fg)
 	}
 	for y := 0; y <= rows+1; y++ {
-		termbox.SetCell(0, y, ' ', white, white)
-		termbox.SetCell(1, y, ' ', white, white)
+		termbox.SetCell(0, y, ' ', fg, fg)
+		termbox.SetCell(1, y, ' ', fg, fg)
 
-		termbox.SetCell(2*cols+2, y, ' ', white, white)
-		termbox.SetCell(2*cols+3, y, ' ', white, white)
+		termbox.SetCell(2*cols+2, y, ' ', fg, fg)
+		termbox.SetCell(2*cols+3, y, ' ', fg, fg)
 	}
-    termbox.SetCell(0, rows+2, 'S', white, black)
-    termbox.SetCell(1, rows+2, 'C', white, black)
-    termbox.SetCell(2, rows+2, 'O', white, black)
-    termbox.SetCell(3, rows+2, 'R', white, black)
-    termbox.SetCell(4, rows+2, 'E', white, black)
+    termbox.SetCell(0, rows+2, 'S', fg, bg)
+    termbox.SetCell(1, rows+2, 'C', fg, bg)
+    termbox.SetCell(2, rows+2, 'O', fg, bg)
+    termbox.SetCell(3, rows+2, 'R', fg, bg)
+    termbox.SetCell(4, rows+2, 'E', fg, bg)
 
     scoreStr := strconv.Itoa(score)
     for i, digitCh := range scoreStr {
-        termbox.SetCell(6 + i, rows+2, digitCh, white, black)
+        termbox.SetCell(6 + i, rows+2, digitCh, fg, bg)
     }
 }
 
@@ -145,7 +163,7 @@ func gameLoop() {
 	for {
 		render()
 
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(speed * time.Millisecond)
 		go handleInput()
 
 		updateGameState()
@@ -155,11 +173,13 @@ func gameLoop() {
 
 func render() {
 	defer termbox.Flush()
-	termbox.Clear(black, black)
+	termbox.Clear(bg, bg)
 	setBorder()
-	setSquare(foodPos.x+1, foodPos.y+1, '', blue, black)
+
+    setSquare(foodPos.x+1, foodPos.y+1, foodCh, foodFg, foodBg) // IDEA: Add skin with 2 colors (need alt setSquare function)
+
 	for _, snekCell := range snek.body {
-		setSquare(snekCell.x+1, snekCell.y+1, ' ', green, green)
+		setSquare(snekCell.x+1, snekCell.y+1, snekCh, snekFg, snekBg)
 	}
 }
 
@@ -192,13 +212,12 @@ func updateGameState() {
 	dir := snek.dir
 	newHead := Pos{head.x + dir.x, head.y + dir.y}
 
-	snek.body = append(snek.body, newHead)
-
-	switch {
+    portal: switch {
 	case newHead == foodPos:
         score++
         snek.len++
 		snek.snekMap[newHead] = true
+        snek.body = append(snek.body, newHead)
 
 		emptyCells := make([]Pos, 0)
 		for _, pos := range positions {
@@ -212,13 +231,27 @@ func updateGameState() {
     case snek.snekMap[newHead] == true: //TODO: Game over screen, select restart/change setting/quit
 		termbox.Close()
 		os.Exit(0)
-	case newHead.x < 0 || newHead.x >= cols || newHead.y < 0 || newHead.y >= rows://TODO: Game over screen, select restart/change setting/quit
-		termbox.Close()
-		os.Exit(0)
+	case newHead.x < 0 || newHead.x >= cols || newHead.y < 0 || newHead.y >= rows:
+        if portals {
+            switch {
+            case newHead.x < 0:
+                newHead.x = cols - 1
+            case newHead.x >= cols:
+                newHead.x = 0
+            case newHead.y < 0:
+                newHead.y = rows - 1
+            case newHead.y >= rows:
+                newHead.y = 0
+            }
+            goto portal
+        } else { //TODO: Game over screen, select restart/change setting/quit
+            termbox.Close()
+            os.Exit(0)
+        }
     default: // TODO: case victory (game over screen but it doesnt say i lost)
+		snek.snekMap[newHead] = true
 		tail := snek.body[0]
 		snek.snekMap[tail] = false
-		snek.snekMap[newHead] = true
-		snek.body = snek.body[1:]
+		snek.body = append(snek.body[1:], newHead)
 	}
 }

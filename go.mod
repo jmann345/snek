@@ -1,4 +1,4 @@
-module snek.com/snek
+module github.com/jmann345/snek
 
 go 1.22.2
 

@@ -10,4 +10,4 @@ snekSkin = "default"
 foodSkin = "gopher"
 speed = 100
 snax = 1
-portals = false
+portals = true

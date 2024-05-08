@@ -20,9 +20,9 @@ type Opts struct {
 
 	FoodFg int `pkl:"foodFg"`
 
-	SnekSkin int32 `pkl:"snekSkin"`
+	SnekSkin string `pkl:"snekSkin"`
 
-	FoodSkin int32 `pkl:"foodSkin"`
+	FoodSkin string `pkl:"foodSkin"`
 
 	Speed int `pkl:"speed"`
 
