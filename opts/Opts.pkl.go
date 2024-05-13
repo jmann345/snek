@@ -20,15 +20,21 @@ type Opts struct {
 
 	FoodFg int `pkl:"foodFg"`
 
+	SnekFgAlt int `pkl:"snekFgAlt"`
+
+	FoodFgAlt int `pkl:"foodFgAlt"`
+
 	SnekSkin string `pkl:"snekSkin"`
 
 	FoodSkin string `pkl:"foodSkin"`
 
 	Speed int `pkl:"speed"`
 
+	Portals bool `pkl:"portals"`
+
 	Snax int `pkl:"snax"`
 
-	Portals bool `pkl:"portals"`
+	LenGain int `pkl:"lenGain"`
 }
 
 // LoadFromPath loads the pkl module at the given path and evaluates it into a Opts

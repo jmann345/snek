@@ -9,8 +9,11 @@ fg: Int
 bg: Int
 snekFg: Int
 foodFg: Int
+snekFgAlt: Int
+foodFgAlt: Int
 snekSkin: String
 foodSkin: String
 speed: Int
-snax: Int
 portals: Boolean
+snax: Int
+lenGain: Int
