@@ -15,5 +15,5 @@ snekSkin: String
 foodSkin: String
 speed: Int
 portals: Boolean
-snax: Int
-lenGain: Int
+snax: Int(this > 0)
+lenGain: Int(this > 0)
