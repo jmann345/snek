@@ -106,7 +106,7 @@ func restartGame(start bool, ux UX, cfg Cfg) Game {
 
 	emptyCells := make([]Pos, 0)
 	for _, pos := range positions {
-		if !snek.snekMap[pos] && pos.in(food) == -1 {
+		if !snek.snekMap[pos] && indexOf(food, pos) == -1 {
 			emptyCells = append(emptyCells, Pos{x: pos.x, y: pos.y})
 		}
 	}
@@ -123,6 +123,7 @@ func restartGame(start bool, ux UX, cfg Cfg) Game {
     } else {
         gs = GameScreen
     }
+
 	return Game{
 		state:     gs,
 		positions: positions,
@@ -142,7 +143,6 @@ func (g *Game) gameLoop() {
 			time.Sleep(g.cfg.speed * time.Millisecond)
 			g.updateGameState()
 		}
-		// TODO: Check for game over conditions
 	}
 }
 
@@ -237,30 +237,28 @@ func (g *Game) render() {
         }
 
         // calculate max length of opt strings for offset of game preview
-        offset := func(strs [14]string) int {
-            o := 2
-            for _, s := range strs {
-                if len(s) + 2 > o {
-                    o = len(s) + 2
-                }
+        var offset int = 2
+        for _, opt := range optStrs {
+            if len(opt) + 2 > offset {
+                offset = len(opt) + 2
             }
-            return o
-        }(optStrs)
+        }
 
         g.setBorder(offset)
+        previewSnek := [7]Pos{{x: 2, y: 7}, {x: 3, y: 7}, {x: 4, y: 7}, {x: 5, y: 7}, {x: 6, y: 7}, {x: 7, y: 7}, {x: 8, y: 7}}
+		for _, snekCell := range previewSnek {
+			if (snekCell.x+snekCell.y)%2 == 0 {
+				setSquare(snekCell.x+1 + offset/2, snekCell.y+1, g.ux.snekCh, g.ux.snekFgAlt, g.ux.snekBgAlt)
+			} else {
+				setSquare(snekCell.x+1 + offset/2, snekCell.y+1, g.ux.snekCh, g.ux.snekFg, g.ux.snekBg)
+			}
+		}
 		for _, foodPos := range g.food {
 			x, y := foodPos.x+1, foodPos.y+1
 			termbox.SetCell(x*2 + offset, y, g.ux.foodCh, g.ux.foodFg, g.ux.foodBg)
 			termbox.SetCell(x*2+1 + offset, y, g.ux.foodCh, g.ux.foodFgAlt, g.ux.foodBgAlt)
 		}
 
-		for _, snekCell := range g.snek.body {
-			if (snekCell.x+snekCell.y)%2 != 0 {
-				setSquare(snekCell.x+1 + offset/2, snekCell.y+1, g.ux.snekCh, g.ux.snekFgAlt, g.ux.snekBgAlt)
-			} else {
-				setSquare(snekCell.x+1 + offset/2, snekCell.y+1, g.ux.snekCh, g.ux.snekFg, g.ux.snekBg)
-			}
-		}
         
 	}
 
@@ -284,6 +282,7 @@ func (g *Game) handleInput() {
                 case ev.Ch == 'c':
                     g.state = ConfigScreen
 				case ev.Ch == 'q' || ev.Key == termbox.KeyEsc || ev.Key == termbox.KeyCtrlC:
+                    // TODO : change to return and see what happens
 					termbox.Close()
 					os.Exit(0)
 				}
@@ -323,9 +322,9 @@ func (g *Game) handleInput() {
 	}
 }
 
-func (p Pos) in(ps []Pos) int { // can I anonymize this while keeping syntax?
-	for i, pos := range ps {
-		if p == pos {
+func indexOf[T comparable](xs []T, x T) int {
+	for i, v := range xs {
+		if v == x {
 			return i
 		}
 	}
@@ -336,35 +335,11 @@ func (g *Game) updateGameState() {
 	snek := g.snek
 	head := snek.body[snek.len-1]
 	tail := snek.body[0]
-	snek.snekMap[tail] = false
 
 	dir := snek.dir
 	newHead := Pos{head.x + dir.x, head.y + dir.y}
-	defer func() { snek.snekMap[newHead] = true }()
-
-portal:
-	switch i := newHead.in(g.food); {
-	case i != -1: // non-negative index <=> new snek head is on food cell
-		g.score++
-		snek.len++
-		snek.snekMap[tail] = true // add length to tail
-		snek.body = append(snek.body, newHead)
-
-		emptyCells := make([]Pos, 0)
-		for _, pos := range g.positions {
-			if !snek.snekMap[pos] && pos.in(g.food) == -1 {
-				emptyCells = append(emptyCells, Pos{x: pos.x, y: pos.y})
-			}
-		}
-		numEmptyCells := len(emptyCells)
-		if numEmptyCells != 0 {
-			newFoodIdx := rand.Intn(numEmptyCells)
-			foodPos := emptyCells[newFoodIdx]
-			g.food[i] = foodPos
-		}
-	case snek.snekMap[newHead] == true:
-		g.state = GameOverScreen
-	case newHead.x < 0 || newHead.x >= g.cfg.cols || newHead.y < 0 || newHead.y >= g.cfg.rows:
+    // refactor below to updatePos() and eatFood() (maybe no)
+    if newHead.x < 0 || newHead.x >= g.cfg.cols || newHead.y < 0 || newHead.y >= g.cfg.rows {
 		if g.cfg.portals {
 			switch {
 			case newHead.x < 0:
@@ -376,11 +351,39 @@ portal:
 			case newHead.y >= g.cfg.rows:
 				newHead.y = 0
 			}
-			goto portal
-		} else {
+        } else {
 			g.state = GameOverScreen
+        }
+    }
+    if snek.snekMap[newHead] == true {
+        g.state = GameOverScreen
+        return
+    }
+
+    if i := indexOf(g.food, newHead); i != -1 {
+		g.score++
+		snek.len++
+        // generate new food location
+		emptyCells := make([]Pos, g.cfg.rows * g.cfg.cols - snek.len)
+        j := 0
+        for _, pos := range g.positions {
+            if !snek.snekMap[pos] && indexOf(g.food, pos) == -1 {
+                emptyCells[j] = Pos{x: pos.x, y: pos.y}
+                j++
+            }
+        }
+
+		numEmptyCells := len(emptyCells)
+		if numEmptyCells != 0 {
+			newFoodIdx := rand.Intn(numEmptyCells)
+			foodPos := emptyCells[newFoodIdx]
+			g.food[i] = foodPos
 		}
-	default: // TODO: case victory (game over screen but it doesnt say i lost) (Should be above game over cases)
-		snek.body = append(snek.body[1:], newHead)
-	}
+    } else {
+        snek.snekMap[tail] = false
+        snek.body = snek.body[1:]
+    } 
+
+    snek.snekMap[newHead] = true 
+    snek.body = append(snek.body, newHead)
 }
