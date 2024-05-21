@@ -221,6 +221,7 @@ func (g *Game) render() {
 		writeStr(2, 2, "[r]estart", fg, bg)
 		writeStr(2, 3, "[q]uit", fg, bg)
     case ConfigScreen:
+        // TODO : Uncomment below
         // var cfgPath string
         // if len(os.Args) == 3 && (os.Args[1] == "-c" || os.Args[1] == "--config") {
         //     cfgPath = os.Args[2]
@@ -228,6 +229,7 @@ func (g *Game) render() {
         //     cfgPath = "pkl/defaultOpts.pkl"
         // }
         // opts, err := opts.LoadFromPath(context.Background(), cfgPath)
+
         optStrs := [14]string{
             "rows", "cols", "fg", "bg", "snek fg", "food fg", "alt snek fg", "alt apple fg", "snek skin", "food skin",
             "speed", "apples", "portals", "length gain",
@@ -253,15 +255,14 @@ func (g *Game) render() {
 				setSquare(snekCell.x+1 + offset/2, snekCell.y+1, g.ux.snekCh, g.ux.snekFg, g.ux.snekBg)
 			}
 		}
+        // TODO : previewFood := make([]Pos, g.cfg.snax)
 		for _, foodPos := range g.food {
 			x, y := foodPos.x+1, foodPos.y+1
 			termbox.SetCell(x*2 + offset, y, g.ux.foodCh, g.ux.foodFg, g.ux.foodBg)
+
 			termbox.SetCell(x*2+1 + offset, y, g.ux.foodCh, g.ux.foodFgAlt, g.ux.foodBgAlt)
 		}
-
-        
 	}
-
 }
 
 func (g *Game) handleInput() {
@@ -322,6 +323,7 @@ func (g *Game) handleInput() {
 	}
 }
 
+// @impl indexOf
 func indexOf[T comparable](xs []T, x T) int {
 	for i, v := range xs {
 		if v == x {
@@ -335,10 +337,10 @@ func (g *Game) updateGameState() {
 	snek := g.snek
 	head := snek.body[snek.len-1]
 	tail := snek.body[0]
-
 	dir := snek.dir
-	newHead := Pos{head.x + dir.x, head.y + dir.y}
+
     // refactor below to updatePos() and eatFood() (maybe no)
+	newHead := Pos{head.x + dir.x, head.y + dir.y}
     if newHead.x < 0 || newHead.x >= g.cfg.cols || newHead.y < 0 || newHead.y >= g.cfg.rows {
 		if g.cfg.portals {
 			switch {
