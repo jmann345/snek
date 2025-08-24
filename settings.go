@@ -3,7 +3,6 @@ package main
 import (
 	"github.com/jmann345/snek/opts"
 	"github.com/nsf/termbox-go"
-	"time"
 )
 
 type UX struct {
@@ -22,13 +21,18 @@ type UX struct {
 	foodCh rune
 }
 
+type Difficulty int
+
+const (
+	Easy = iota
+	Medium
+	Hard
+)
+
 type Cfg struct {
-	rows    int
-	cols    int
-	speed   time.Duration
-	portals bool
-	snax    int
-	lenGain int
+	rows       int
+	cols       int
+	difficulty Difficulty
 }
 
 func initConfig(opts *opts.Opts) (UX, Cfg) {
@@ -58,6 +62,10 @@ func initConfig(opts *opts.Opts) (UX, Cfg) {
 			switch opts.FoodSkin {
 			case "gopher":
 				return ''
+			case "money":
+				return '$'
+			case "fakemoney":
+				return '€'
 			default: //TODO: Add more food skins
 				return ' '
 			}
@@ -73,14 +81,16 @@ func initConfig(opts *opts.Opts) (UX, Cfg) {
 	}
 
 	cfg := Cfg{
-		rows:    opts.Rows,
-		cols:    opts.Cols,
-		speed:   time.Duration(opts.Speed),
-		snax:    opts.Snax, // init extra food on map
-		portals: opts.Portals,
-
-		// TODO: uncomment line below
-		// lenGain int
+		rows: opts.Rows,
+		cols: opts.Cols,
+		difficulty: func() Difficulty {
+			if opts.Cols >= 30 {
+				return Hard
+			} else if opts.Cols >= 16 {
+				return Medium
+			}
+			return Easy
+		}(),
 	}
 
 	return ux, cfg

@@ -1,16 +1,16 @@
 amends "./Opts.pkl"
 
 rows = 16
-cols = 16
+cols = 30
 fg = 8
 bg = 1
 snekFg = 3
-foodFg = 5
-snekFgAlt = 2
+foodFg = 2
+snekFgAlt = 3
 foodFgAlt = 2
 snekSkin = "default"
-foodSkin = "gopher"
-speed = 100
+foodSkin = "money"
+speed = 25
 snax = 5
 portals = true
 lenGain = 1
